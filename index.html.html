@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心职助手 StarBridge</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Nunito', sans-serif; background: #C8C3BD; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+button { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+input, select, textarea { font-family: 'Nunito', sans-serif; }
+::-webkit-scrollbar { width: 0; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes checkPop { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const C = {
+  green: "#2E7D32", greenL: "#E8F5E9",
+  red: "#C62828", redL: "#FFEBEE",
+  blue: "#1565C0", blueL: "#E3F2FD",
+  yellow: "#F57F17", yellowL: "#FFF8E1",
+  purple: "#6A1B9A", purpleL: "#F3E5F5",
+  pink: "#AD1457", pinkL: "#FCE4EC",
+  orange: "#E65100", orangeL: "#FFF3E0",
+  teal: "#00695C", tealL: "#E0F5F1",
+  bg: "#FAF9F6", text: "#1A1A1A", sub: "#888",
+};
+
+// ── 数据：默认展示咖啡/烘焙行业 ──
+const JOBS = [
+  { id: "bakery", name: "烘焙咖啡", icon: "☕", color: "#B53800", light: "#FEF0EA" },
+  { id: "hotel", name: "酒店客房", icon: "🏨", color: "#5D3FD3", light: "#F0ECFE" },
+  { id: "kitchen", name: "后厨辅助", icon: "🍳", color: "#7B5E00", light: "#FEF9E6" },
+  { id: "cleaning", name: "保洁环卫", icon: "🧹", color: "#1565C0", light: "#E8F2FD" },
+  { id: "retail", name: "零售服务", icon: "🛍️", color: "#C2185B", light: "#FCE4EC" },
+];
+
+const EMERGENCIES = {
+  bakery: [
+    { icon: "☕", title: "咖啡洒了", steps: ["先不要动", "拿抹布擦干净", "擦完洗手，重新做一杯"] },
+    { icon: "❌", title: "做错了", steps: ["没关系，重新做", "把做错的倒掉", "不确定就问同事"] },
+    { icon: "🔥", title: "烫到了", steps: ["马上用冷水冲", "冲5分钟以上", "告诉主管"] },
+  ],
+  hotel: [
+    { icon: "😱", title: "房间里有人", steps: ["说「对不起」", "退出来关门", "告诉主管"] },
+    { icon: "🔧", title: "东西坏了", steps: ["不要自己修", "告诉主管", "先做别的"] },
+  ],
+  kitchen: [
+    { icon: "💥", title: "盘子摔了", steps: ["站住不要动", "等别人来帮忙", "不要用手捡碎片"] },
+    { icon: "🩹", title: "切到手了", steps: ["马上用冷水冲", "告诉厨师", "贴上创可贴"] },
+  ],
+  cleaning: [
+    { icon: "🧊", title: "地上有碎玻璃", steps: ["不要用手捡", "告诉旁边的人", "用扫帚扫"] },
+    { icon: "💧", title: "有人滑倒了", steps: ["不要慌", "叫人来帮", "放小心地滑牌"] },
+  ],
+  retail: [
+    { icon: "😠", title: "顾客生气了", steps: ["不要害怕", "说「我找人帮您」", "叫主管来"] },
+    { icon: "💰", title: "价格弄错了", steps: ["不要慌", "说「我重新算」", "叫同事来"] },
+  ],
+};
+
+const PHRASES = {
+  bakery: {
+    work: [
+      { icon: "☕", text: "请问喝什么？" },
+      { icon: "🥛", text: "要加牛奶吗？" },
+      { icon: "🍬", text: "要加糖吗？" },
+      { icon: "✅", text: "您的好了" },
+      { icon: "🙏", text: "请稍等" },
+      { icon: "💰", text: "一共28元" },
+    ],
+    social: [
+      { icon: "👋", text: "早上好" },
+      { icon: "🙏", text: "谢谢你帮我" },
+      { icon: "😊", text: "我今天做得很好" },
+      { icon: "🍰", text: "这个蛋糕很好吃" },
+      { icon: "👋", text: "再见，明天见" },
+      { icon: "❌", text: "我现在有点忙" },
+    ],
+  },
+  hotel: {
+    work: [
+      { icon: "🚪", text: "客房服务" },
+      { icon: "🧹", text: "我来打扫" },
+      { icon: "✅", text: "打扫完了" },
+      { icon: "🙏", text: "打扰了" },
+    ],
+    social: [
+      { icon: "👋", text: "早上好" },
+      { icon: "🙏", text: "谢谢你" },
+      { icon: "😊", text: "我今天做得很好" },
+      { icon: "👋", text: "再见" },
+      { icon: "❌", text: "我现在有点忙" },
+    ],
+  },
+  kitchen: {
+    work: [
+      { icon: "🍽️", text: "菜来了" },
+      { icon: "🔥", text: "小心烫" },
+      { icon: "✅", text: "送到了" },
+      { icon: "🙏", text: "让一下" },
+    ],
+    social: [
+      { icon: "👋", text: "早上好" },
+      { icon: "🙏", text: "谢谢你" },
+      { icon: "😊", text: "我今天做得很好" },
+      { icon: "👋", text: "再见" },
+      { icon: "❌", text: "我现在有点忙" },
+    ],
+  },
+  cleaning: {
+    work: [
+      { icon: "🧹", text: "我来打扫" },
+      { icon: "⚠️", text: "小心地滑" },
+      { icon: "✅", text: "打扫完了" },
+      { icon: "🙏", text: "请让一下" },
+    ],
+    social: [
+      { icon: "👋", text: "早上好" },
+      { icon: "🙏", text: "谢谢你" },
+      { icon: "😊", text: "我今天做得很好" },
+      { icon: "👋", text: "再见" },
+      { icon: "❌", text: "我现在有点忙" },
+    ],
+  },
+  retail: {
+    work: [
+      { icon: "👋", text: "欢迎光临" },
+      { icon: "❓", text: "需要什么？" },
+      { icon: "👉", text: "在那边" },
+      { icon: "✅", text: "谢谢光临" },
+    ],
+    social: [
+      { icon: "👋", text: "早上好" },
+      { icon: "🙏", text: "谢谢你" },
+      { icon: "😊", text: "我今天做得很好" },
+      { icon: "👋", text: "再见" },
+      { icon: "❌", text: "我现在有点忙" },
+    ],
+  },
+};
+
+const SHIFT_TASKS = {
+  bakery: [
+    { id: 1, title: "开店准备", icon: "⚡", steps: [
+      { text: "开机预热", tip: "等绿灯亮" },
+      { text: "检查原料", tip: "豆、奶、糖浆" },
+      { text: "摆好杯具", tip: "放操作台旁" },
+    ]},
+    { id: 3, title: "清洁收尾", icon: "🧹", steps: [
+      { text: "擦蒸汽管", tip: "用湿布趁热擦" },
+      { text: "冲粉碗", tip: "用水冲干净" },
+      { text: "擦操作台", tip: "保持台面整洁" },
+    ]},
+  ],
+  hotel: [
+    { id: 1, title: "进入房间前", icon: "🚪", steps: [
+      { text: "敲门3下", tip: "用手背敲门" },
+      { text: "说「客房服务」", tip: "正常声音" },
+      { text: "等10秒", tip: "数1到10" },
+      { text: "开门进去", tip: "轻轻推" },
+    ]},
+  ],
+  retail: [
+    { id: 1, title: "开店准备", icon: "⚡", steps: [
+      { text: "整理货架", tip: "把商品摆整齐" },
+      { text: "检查价格标签", tip: "标签朝外" },
+      { text: "清洁地面", tip: "扫一扫" },
+    ]},
+    { id: 2, title: "关店收尾", icon: "🔒", steps: [
+      { text: "整理购物车", tip: "放回指定位置" },
+      { text: "检查收银台", tip: "物品归位" },
+      { text: "关灯锁门", tip: "确认都关了" },
+    ]},
+  ],
+  kitchen: [
+    { id: 1, title: "备菜准备", icon: "🥬", steps: [
+      { text: "洗手", tip: "用洗手液" },
+      { text: "穿围裙", tip: "系好带子" },
+      { text: "检查食材", tip: "看是否新鲜" },
+    ]},
+    { id: 2, title: "清洁收尾", icon: "🧹", steps: [
+      { text: "擦桌子", tip: "用湿布" },
+      { text: "洗工具", tip: "冲干净" },
+      { text: "倒垃圾", tip: "分类投放" },
+    ]},
+  ],
+  cleaning: [
+    { id: 1, title: "清洁准备", icon: "🪣", steps: [
+      { text: "准备工具", tip: "拖把、抹布、清洁剂" },
+      { text: "穿好工作服", tip: "系好扣子" },
+      { text: "确认区域", tip: "看分配表" },
+    ]},
+    { id: 2, title: "收尾检查", icon: "✅", steps: [
+      { text: "检查角落", tip: "不要遗漏" },
+      { text: "归还工具", tip: "放回原处" },
+      { text: "报告完成", tip: "找主管确认" },
+    ]},
+  ],
+};
+
+const QUICK_CARDS = {
+  bakery: [
+    { id: 2, title: "做咖啡", icon: "☕", steps: [
+      { text: "磨咖啡豆", tip: "按一次就够" },
+      { text: "填压粉碗", tip: "力道均匀" },
+      { text: "萃取咖啡", tip: "等25秒" },
+      { text: "加牛奶", tip: "按顾客说的加" },
+    ]},
+    { id: 4, title: "做奶茶", icon: "🧋", steps: [
+      { text: "泡茶底", tip: "等3分钟" },
+      { text: "加奶和糖", tip: "按配方" },
+      { text: "摇匀", tip: "摇10下" },
+    ]},
+  ],
+  hotel: [
+    { id: 2, title: "换床单", icon: "🛏️", steps: [
+      { text: "撤旧床单", tip: "卷起来放地上" },
+      { text: "铺新床单", tip: "四角塞紧" },
+      { text: "整理枕头", tip: "拍松放正" },
+    ]},
+    { id: 3, title: "打扫浴室", icon: "🚿", steps: [
+      { text: "喷清洁剂", tip: "等2分钟" },
+      { text: "擦镜子", tip: "从上到下" },
+      { text: "擦马桶", tip: "先盖后圈" },
+    ]},
+  ],
+  retail: [
+    { id: 3, title: "商品上架", icon: "📦", steps: [
+      { text: "核对商品", tip: "看条码" },
+      { text: "摆到货架", tip: "正面朝外" },
+      { text: "贴价格签", tip: "对齐贴好" },
+    ]},
+    { id: 4, title: "收银结账", icon: "💰", steps: [
+      { text: "扫码商品", tip: "听嘀声" },
+      { text: "说总价", tip: "看屏幕显示" },
+      { text: "收好钱", tip: "确认金额" },
+    ]},
+  ],
+  kitchen: [
+    { id: 3, title: "切菜", icon: "🔪", steps: [
+      { text: "洗蔬菜", tip: "冲干净" },
+      { text: "切均匀", tip: "大小一致" },
+      { text: "装盘备用", tip: "放指定位置" },
+    ]},
+    { id: 4, title: "传菜", icon: "🍽️", steps: [
+      { text: "核对订单", tip: "看单号" },
+      { text: "端稳盘子", tip: "用托盘" },
+      { text: "送到桌上", tip: "说菜名" },
+    ]},
+  ],
+  cleaning: [
+    { id: 3, title: "拖地", icon: "🧹", steps: [
+      { text: "打湿拖把", tip: "拧干一点" },
+      { text: "从里到外", tip: "倒着走" },
+      { text: "洗拖把", tip: "脏了要洗" },
+    ]},
+    { id: 4, title: "擦玻璃", icon: "🪟", steps: [
+      { text: "喷清洁剂", tip: "均匀喷" },
+      { text: "从上往下", tip: "Z字形擦" },
+      { text: "擦干水痕", tip: "用干布" },
+    ]},
+  ],
+};
+
+function vibrate() { if (navigator.vibrate) navigator.vibrate(30); }
+function speak(text, rate = 0.8) {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = rate;
+    speechSynthesis.speak(u);
+  }
+}
+
+// ══════════════════════════════════════
+// ── 通用组件 ──
+// ══════════════════════════════════════
+
+function Header({ title, onBack, darkMode }) {
+  return (
+    <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, borderBottom: darkMode ? "1px solid #333" : "1px solid #EEEEE8", background: darkMode ? "#16213e" : "transparent" }}>
+      {onBack && (
+        <button onClick={onBack} style={{ background: darkMode ? "#0f3460" : "#F0F0EE", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: darkMode ? "#fff" : "#000" }}>‹</button>
+      )}
+      <span style={{ fontSize: 17, fontWeight: 900, color: darkMode ? "#fff" : C.text, flex: 1 }}>{title}</span>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── 登录页 ──
+// ══════════════════════════════════════
+
+function LoginPage({ onLogin }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg, padding: "40px 24px 24px" }}>
+      <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <span style={{ fontSize: 56, animation: "float 3s ease-in-out infinite", display: "inline-block" }}>🌟</span>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: C.text, marginTop: 12 }}>心职助手</h1>
+        <p style={{ fontSize: 16, color: C.sub, fontWeight: 700, marginTop: 6 }}>StarBridge</p>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 14, fontWeight: 800, color: C.text, display: "block", marginBottom: 6 }}>你的名字</label>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="请输入名字" style={{
+          width: "100%", border: "3px solid #E0E0E0", borderRadius: 16, padding: "14px 16px",
+          fontSize: 18, fontWeight: 700, outline: "none",
+        }} />
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 14, fontWeight: 800, color: C.text, display: "block", marginBottom: 6 }}>你是谁？</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { id: "worker", icon: "👷", label: "我是员工", desc: "工作中需要支持" },
+            { id: "employer", icon: "👔", label: "我是雇主/主管", desc: "管理员工和任务" },
+            { id: "parent", icon: "👨‍👩‍👧", label: "我是家长", desc: "关注孩子工作情况" },
+          ].map(r => (
+            <button key={r.id} onClick={() => { vibrate(); setRole(r.id); }} style={{
+              background: role === r.id ? C.blueL : "#F0F0EE",
+              border: role === r.id ? `3px solid ${C.blue}` : "3px solid transparent",
+              borderRadius: 18, padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%",
+            }}>
+              <span style={{ fontSize: 32 }}>{r.icon}</span>
+              <div>
+                <p style={{ fontSize: 17, fontWeight: 900, color: role === r.id ? C.blue : C.text }}>{r.label}</p>
+                <p style={{ fontSize: 13, color: C.sub, fontWeight: 700 }}>{r.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={() => { if (name && role) { vibrate(); onLogin(name, role); } }} style={{
+        background: name && role ? C.blue : "#E0E0DA", border: "none",
+        borderRadius: 20, height: 64, fontSize: 20, fontWeight: 900,
+        color: name && role ? "#fff" : "#BBB", width: "100%",
+      }}>登录</button>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── 职业选择页 ──
+// ══════════════════════════════════════
+
+function JobSelectPage({ onSelect, onBack }) {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="选择你的职业" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px" }}>
+        <p style={{ fontSize: 16, color: C.sub, fontWeight: 700, marginBottom: 16 }}>点选你正在做的工作 👇</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {JOBS.map(job => (
+            <button key={job.id} onClick={() => { vibrate(); onSelect(job.id); }} style={{
+              background: job.light, border: "none", borderRadius: 22,
+              padding: "20px 22px", display: "flex", alignItems: "center",
+              gap: 14, textAlign: "left", width: "100%",
+            }}>
+              <span style={{ fontSize: 40 }}>{job.icon}</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 22, fontWeight: 900, color: job.color }}>{job.name}</p>
+                <p style={{ fontSize: 13, color: C.sub, fontWeight: 700, marginTop: 2 }}>
+                  {job.id === "bakery" ? "示例行业：咖啡制作、烘焙服务" : "标准化服务岗位"}
+                </p>
+              </div>
+              <span style={{ fontSize: 22, color: job.color, opacity: 0.4 }}>›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── 员工端 ──
+// ══════════════════════════════════════
+
+function WorkerHomePage({ userName, jobId, onSpeak, onEmergency, onMood, onShare, onPlayer, onQuickCard, onSettings, onSwitchRole }) {
+  const job = JOBS.find(j => j.id === jobId);
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <div style={{ padding: "16px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ fontSize: 14, color: C.sub, fontWeight: 700 }}>你好，{userName}！</p>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: C.text }}>今天也要加油 💪</h1>
+          {job && <p style={{ fontSize: 13, color: job.color, fontWeight: 800, marginTop: 2 }}>{job.icon} {job.name}</p>}
+        </div>
+        <button onClick={onSwitchRole} style={{ background: C.orangeL, border: `1.5px solid ${C.orange}30`, borderRadius: 12, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: C.orange }}>
+          切换
+        </button>
+      </div>
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 16px 16px", gap: 10 }}>
+        <button onClick={() => { vibrate(); onSpeak(); }} style={{
+          flex: 1, background: C.pinkL, border: `3px solid ${C.pink}`,
+          borderRadius: 24, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 8,
+        }}>
+          <span style={{ fontSize: 44 }}>💬</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: C.pink }}>我想表达</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.pink, opacity: 0.7 }}>工作用语 / 想说的话</span>
+        </button>
+
+        <button onClick={() => { vibrate(); onEmergency(); }} style={{
+          flex: 1, background: C.redL, border: `3px solid ${C.red}`,
+          borderRadius: 24, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 8,
+        }}>
+          <span style={{ fontSize: 44 }}>🆘</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: C.red }}>叫老师来</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.red, opacity: 0.7 }}>有问题，需要帮忙</span>
+        </button>
+
+        <div style={{ display: "flex", gap: 10, flex: 1 }}>
+          <button onClick={() => { vibrate(); onMood(); }} style={{
+            flex: 1, background: C.tealL, border: `3px solid ${C.teal}`,
+            borderRadius: 24, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            <span style={{ fontSize: 32 }}>😔</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: C.teal }}>我不舒服</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.teal, opacity: 0.7 }}>身体或情绪</span>
+          </button>
+          <button onClick={() => { vibrate(); onShare(); }} style={{
+            flex: 1, background: C.greenL, border: `3px solid ${C.green}`,
+            borderRadius: 24, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            <span style={{ fontSize: 32 }}>🌟</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: C.green }}>我想分享</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.green, opacity: 0.7 }}>做到了 / 我很好</span>
+          </button>
+        </div>
+      </div>
+
+      <div style={{ padding: "0 16px 16px", display: "flex", gap: 10 }}>
+        <button onClick={() => { vibrate(); onPlayer(); }} style={{
+          flex: 1, background: C.blueL, border: `2px solid ${C.blue}30`,
+          borderRadius: 16, padding: "12px", display: "flex", flexDirection: "column",
+          alignItems: "center", gap: 4,
+        }}>
+          <span style={{ fontSize: 22 }}>📋</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.blue }}>今日清单</span>
+        </button>
+        <button onClick={() => { vibrate(); onQuickCard(); }} style={{
+          flex: 1, background: C.yellowL, border: `2px solid ${C.yellow}30`,
+          borderRadius: 16, padding: "12px", display: "flex", flexDirection: "column",
+          alignItems: "center", gap: 4,
+        }}>
+          <span style={{ fontSize: 22 }}>📖</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.yellow }}>快速查阅</span>
+        </button>
+        <button onClick={() => { vibrate(); onSettings(); }} style={{
+          flex: 1, background: "#F0F0EE", border: "2px solid #E0E0DA",
+          borderRadius: 16, padding: "12px", display: "flex", flexDirection: "column",
+          alignItems: "center", gap: 4,
+        }}>
+          <span style={{ fontSize: 22 }}>⚙️</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.sub }}>设置</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── 沟通辅助 ──
+function SpeakPage({ jobId, onBack }) {
+  const phrases = PHRASES[jobId] || { work: [], social: [] };
+  const [speaking, setSpeaking] = useState(null);
+  const [customText, setCustomText] = useState("");
+  const [activeTab, setActiveTab] = useState("work");
+
+  const handleSpeak = (text) => {
+    vibrate();
+    setSpeaking(text);
+    speak(text, 0.8);
+    setTimeout(() => setSpeaking(null), 2000);
+  };
+
+  const handleCustomSpeak = () => {
+    if (customText.trim()) {
+      handleSpeak(customText.trim());
+      setCustomText("");
+    }
+  };
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="我想表达" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <button onClick={() => setActiveTab("work")} style={{
+            flex: 1, background: activeTab === "work" ? C.pinkL : "#F0F0EE",
+            border: activeTab === "work" ? `2px solid ${C.pink}` : "2px solid transparent",
+            borderRadius: 12, padding: "10px", fontSize: 14, fontWeight: 800,
+            color: activeTab === "work" ? C.pink : C.sub,
+          }}>工作用语</button>
+          <button onClick={() => setActiveTab("social")} style={{
+            flex: 1, background: activeTab === "social" ? C.purpleL : "#F0F0EE",
+            border: activeTab === "social" ? `2px solid ${C.purple}` : "2px solid transparent",
+            borderRadius: 12, padding: "10px", fontSize: 14, fontWeight: 800,
+            color: activeTab === "social" ? C.purple : C.sub,
+          }}>想说的话</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {(activeTab === "work" ? phrases.work : phrases.social).map((p, i) => (
+            <button key={i} onClick={() => handleSpeak(p.text)} style={{
+              background: speaking === p.text ? (activeTab === "work" ? C.pinkL : C.purpleL) : "#FFF",
+              border: `2px solid ${speaking === p.text ? (activeTab === "work" ? C.pink : C.purple) : "#E0E0DA"}`,
+              borderRadius: 18, padding: "16px 18px",
+              display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%",
+            }}>
+              <span style={{ fontSize: 28 }}>{p.icon}</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: C.text }}>{p.text}</span>
+              <span style={{ marginLeft: "auto", fontSize: 18 }}>{speaking === p.text ? "🔊" : "▶️"}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 16, background: "#F5F5F2", borderRadius: 16, padding: "14px" }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: C.sub, marginBottom: 8 }}>想说什么，自己输入：</p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={customText} onChange={e => setCustomText(e.target.value)} placeholder="例如：谢谢你今天帮我" style={{
+              flex: 1, border: "2px solid #E0E0E0", borderRadius: 14, padding: "12px 14px",
+              fontSize: 16, fontWeight: 700, outline: "none",
+            }} />
+            <button onClick={handleCustomSpeak} style={{
+              background: C.pink, border: "none", borderRadius: 14,
+              padding: "0 18px", fontSize: 15, fontWeight: 900, color: "#fff",
+            }}>说</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 突发情况+求助 ──
+function EmergencyPage({ jobId, onBack }) {
+  const emergencies = EMERGENCIES[jobId] || [];
+  const [active, setActive] = useState(null);
+  const [helpSent, setHelpSent] = useState(false);
+
+  if (helpSent) return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, padding: 28, textAlign: "center" }}>
+      <span style={{ fontSize: 32, color: C.green, animation: "checkPop 0.4s ease-out", display: "inline-block" }}>✓</span>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: C.text, marginTop: 14, marginBottom: 8 }}>已通知老师</h2>
+      <p style={{ fontSize: 15, color: C.sub, fontWeight: 700, marginBottom: 24 }}>老师马上来</p>
+      <button onClick={onBack} style={{ background: C.green, border: "none", borderRadius: 20, height: 56, fontSize: 17, fontWeight: 900, color: "#fff", width: "100%" }}>好的</button>
+    </div>
+  );
+
+  if (active) return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="怎么办" onBack={() => setActive(null)} />
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <span style={{ fontSize: 56 }}>{active.icon}</span>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: C.text, marginTop: 10 }}>{active.title}</h2>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {active.steps.map((s, i) => (
+            <div key={i} style={{ background: C.yellowL, borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ background: C.yellow, color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, flexShrink: 0 }}>{i + 1}</span>
+              <p style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{s}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <button onClick={() => { vibrate(); setHelpSent(true); speak("已经通知老师了"); }} style={{ background: C.red, border: "none", borderRadius: 20, height: 56, fontSize: 18, fontWeight: 900, color: "#fff", width: "100%" }}>🆘 叫老师来</button>
+        <button onClick={() => setActive(null)} style={{ background: "#F0F0EE", border: "none", borderRadius: 20, height: 48, fontSize: 15, fontWeight: 800, color: C.sub, width: "100%" }}>← 返回</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="遇到问题了？" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <div style={{ background: C.redL, borderRadius: 18, padding: "18px", marginBottom: 16, textAlign: "center" }}>
+          <button onClick={() => { vibrate(); setHelpSent(true); speak("已经通知老师了"); }} style={{
+            background: C.red, border: "none", borderRadius: 18,
+            height: 56, fontSize: 18, fontWeight: 900, color: "#fff", width: "100%",
+          }}>🆘 直接叫老师来</button>
+          <p style={{ fontSize: 13, color: C.red, fontWeight: 700, marginTop: 8 }}>不用选，直接叫</p>
+        </div>
+        <p style={{ fontSize: 14, color: C.sub, fontWeight: 700, marginBottom: 10 }}>或者看看怎么处理 👇</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {emergencies.map((emg, i) => (
+            <button key={i} onClick={() => { vibrate(); setActive(emg); }} style={{
+              background: C.redL, border: `2px solid ${C.red}40`,
+              borderRadius: 18, padding: "16px 18px",
+              display: "flex", alignItems: "center", gap: 14, textAlign: "left", width: "100%",
+            }}>
+              <span style={{ fontSize: 32 }}>{emg.icon}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: C.red }}>{emg.title}</span>
+              <span style={{ marginLeft: "auto", fontSize: 18, color: C.red, opacity: 0.4 }}>›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 正向分享 ──
+function SharePage({ onBack }) {
+  const [sent, setSent] = useState(false);
+  const shares = [
+    { icon: "✅", text: "我做到了", color: C.green, bg: C.greenL },
+    { icon: "💪", text: "我自己处理好了", color: C.blue, bg: C.blueL },
+    { icon: "😊", text: "我今天很好", color: C.yellow, bg: C.yellowL },
+    { icon: "🙏", text: "谢谢你帮我", color: C.purple, bg: C.purpleL },
+  ];
+
+  if (sent) return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, padding: 28, textAlign: "center" }}>
+      <span style={{ fontSize: 32, color: C.green, animation: "checkPop 0.4s ease-out", display: "inline-block" }}>✓</span>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: C.text, marginTop: 14, marginBottom: 8 }}>已发送</h2>
+      <button onClick={onBack} style={{ background: C.green, border: "none", borderRadius: 20, height: 56, fontSize: 17, fontWeight: 900, color: "#fff", width: "100%" }}>好的</button>
+    </div>
+  );
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="我想分享" onBack={onBack} />
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        <p style={{ fontSize: 16, color: C.sub, fontWeight: 700, marginBottom: 14 }}>选一个 👇</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {shares.map(s => (
+            <button key={s.text} onClick={() => { vibrate(); setSent(true); speak(s.text); }} style={{
+              background: s.bg, border: `2px solid ${s.color}30`,
+              borderRadius: 18, padding: "18px 12px",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+            }}>
+              <span style={{ fontSize: 36 }}>{s.icon}</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: s.color }}>{s.text}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 情绪/身体求助 ──
+function MoodPage({ onBack }) {
+  const [selected, setSelected] = useState(null);
+  const [sent, setSent] = useState(false);
+
+  const moods = [
+    { id: "tired", icon: "😴", text: "有点累", color: C.blue, bg: C.blueL, msg: "累了就歇一歇。喝口水，深呼吸。", action: "休息一下" },
+    { id: "anxious", icon: "😰", text: "有点紧张", color: C.yellow, bg: C.yellowL, msg: "慢慢来，没关系。深吸一口气。", action: "深呼吸" },
+    { id: "sad", icon: "😢", text: "不开心", color: C.purple, bg: C.purpleL, msg: "每个人都会不开心。需要帮助就按求助。", action: "找人聊聊" },
+    { id: "sick", icon: "🤒", text: "身体不舒服", color: C.red, bg: C.redL, msg: "身体不舒服要告诉老师。不要硬撑。", action: "告诉老师" },
+  ];
+
+  if (sent) return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, padding: 28, textAlign: "center" }}>
+      <span style={{ fontSize: 32, color: C.green, animation: "checkPop 0.4s ease-out", display: "inline-block" }}>✓</span>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: C.text, marginTop: 14, marginBottom: 8 }}>已告诉老师</h2>
+      <p style={{ fontSize: 15, color: C.sub, fontWeight: 700, marginBottom: 24 }}>老师马上来</p>
+      <button onClick={onBack} style={{ background: C.green, border: "none", borderRadius: 20, height: 56, fontSize: 17, fontWeight: 900, color: "#fff", width: "100%" }}>好的</button>
+    </div>
+  );
+
+  if (selected) {
+    const m = moods.find(x => x.id === selected);
+    return (
+      <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: m.bg, padding: 28, textAlign: "center" }}>
+        <span style={{ fontSize: 72 }}>{m.icon}</span>
+        <h2 style={{ fontSize: 26, fontWeight: 900, color: m.color, marginTop: 14, marginBottom: 12 }}>{m.msg}</h2>
+        <button onClick={() => { vibrate(); setSent(true); speak("已经告诉老师了"); }} style={{
+          background: m.color, border: "none", borderRadius: 20, height: 60, fontSize: 18, fontWeight: 900, color: "#fff", width: "100%", marginBottom: 10,
+        }}>📨 告诉老师</button>
+        <button onClick={() => setSelected(null)} style={{
+          background: "rgba(255,255,255,0.6)", border: "none", borderRadius: 20, height: 48, fontSize: 15, fontWeight: 800, color: m.color, width: "100%",
+        }}>← 重新选择</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="你现在感觉怎样？" onBack={onBack} />
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        <p style={{ fontSize: 16, color: C.sub, fontWeight: 700, marginBottom: 14 }}>选一个最像你的 👇</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {moods.map(m => (
+            <button key={m.id} onClick={() => { vibrate(); setSelected(m.id); }} style={{
+              background: m.bg, border: `2px solid ${m.color}30`,
+              borderRadius: 18, padding: "18px 12px",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+            }}>
+              <span style={{ fontSize: 36 }}>{m.icon}</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: m.color }}>{m.text}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 快速查阅卡片 ──
+function QuickCardPage({ jobId, onBack }) {
+  const cards = QUICK_CARDS[jobId] || [];
+  const [activeCard, setActiveCard] = useState(null);
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+
+  const steps = activeCard ? activeCard.steps : [];
+  const current = steps[idx];
+
+  useEffect(() => {
+    if (playing && current) {
+      speak(current.text);
+      const timer = setTimeout(() => setPlaying(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [playing, idx, current]);
+
+  if (activeCard) {
+    return (
+      <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+        <Header title={activeCard.title} onBack={() => { setActiveCard(null); setIdx(0); }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
+          <div style={{ background: C.blueL, borderRadius: 24, width: "100%", padding: "24px 20px", textAlign: "center" }}>
+            <div style={{ margin: "12px 0" }}>
+              <span style={{ fontSize: 56 }}>{activeCard.icon}</span>
+            </div>
+            <h2 style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.3 }}>{current.text}</h2>
+            {current.tip && (
+              <div style={{ background: "rgba(255,255,255,0.6)", borderRadius: 12, padding: "10px 14px", marginTop: 12, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                <span style={{ fontSize: 14 }}>💡</span>
+                <p style={{ fontSize: 16, color: C.yellow, fontWeight: 800 }}>{current.tip}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: "8px 20px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 12 }}>
+            <button onClick={() => { vibrate(); if (idx > 0) setIdx(idx - 1); }} disabled={idx === 0} style={{ background: idx === 0 ? "#E0E0DA" : "#F0F0EE", border: "none", borderRadius: "50%", width: 56, height: 56, fontSize: 22, color: idx === 0 ? "#BBB" : C.text }}>⏮</button>
+            <button onClick={() => { vibrate(); setPlaying(true); }} style={{ background: C.yellowL, border: `2px solid ${C.yellow}`, borderRadius: "50%", width: 68, height: 68, fontSize: 26, color: C.yellow }}>🔊</button>
+            <button onClick={() => { vibrate(); if (idx < steps.length - 1) setIdx(idx + 1); }} disabled={idx === steps.length - 1} style={{ background: idx === steps.length - 1 ? "#E0E0DA" : "#F0F0EE", border: "none", borderRadius: "50%", width: 56, height: 56, fontSize: 22, color: idx === steps.length - 1 ? "#BBB" : C.text }}>⏭</button>
+          </div>
+          <button onClick={() => { vibrate(); setIdx(0); }} style={{ background: "#F0F0EE", border: "none", borderRadius: 18, height: 48, fontSize: 15, fontWeight: 800, color: C.sub, width: "100%" }}>🔄 从头看</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="快速查阅" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <p style={{ fontSize: 14, color: C.sub, fontWeight: 700, marginBottom: 12 }}>随时查看，不用打勾 👇</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {cards.map((card, i) => (
+            <button key={i} onClick={() => { vibrate(); setActiveCard(card); setIdx(0); }} style={{
+              background: "#FFF", border: "2px solid #E0E0DA", borderRadius: 18,
+              padding: "18px", display: "flex", alignItems: "center", gap: 14,
+              textAlign: "left", width: "100%",
+            }}>
+              <span style={{ fontSize: 36 }}>{card.icon}</span>
+              <div>
+                <p style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{card.title}</p>
+                <p style={{ fontSize: 13, color: C.sub, fontWeight: 700 }}>{card.steps.length} 个步骤</p>
+              </div>
+              <span style={{ marginLeft: "auto", fontSize: 20, color: C.sub }}>›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 步骤播放器（班次任务） ──
+function PlayerPage({ jobId, onBack }) {
+  const tasks = SHIFT_TASKS[jobId] || [];
+  const allSteps = tasks.flatMap(t => t.steps.map(s => ({ ...s, taskTitle: t.title, taskIcon: t.icon })));
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+
+  const current = allSteps[idx];
+
+  useEffect(() => {
+    if (playing && current) {
+      speak(current.text);
+      const timer = setTimeout(() => setPlaying(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [playing, idx]);
+
+  const goNext = () => { vibrate(); if (idx < allSteps.length - 1) setIdx(idx + 1); };
+  const goPrev = () => { vibrate(); if (idx > 0) setIdx(idx - 1); };
+  const replay = () => { vibrate(); setPlaying(true); };
+
+  if (!current) return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, padding: 28 }}>
+      <p style={{ fontSize: 18, color: C.sub, fontWeight: 700 }}>暂时没有步骤</p>
+      <button onClick={onBack} style={{ marginTop: 20, background: C.blue, border: "none", borderRadius: 20, height: 56, fontSize: 17, fontWeight: 900, color: "#fff", width: "100%" }}>返回</button>
+    </div>
+  );
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="今日清单" onBack={onBack} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
+        <div style={{ background: C.blueL, borderRadius: 24, width: "100%", padding: "24px 20px", textAlign: "center" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: C.blue, background: "rgba(255,255,255,0.7)", padding: "3px 12px", borderRadius: 12, display: "inline-block", marginBottom: 10 }}>{current.taskTitle}</span>
+          <div style={{ margin: "12px 0" }}>
+            <span style={{ fontSize: 56 }}>{current.taskIcon}</span>
+          </div>
+          <h2 style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.3 }}>{current.text}</h2>
+          {current.tip && (
+            <div style={{ background: "rgba(255,255,255,0.6)", borderRadius: 12, padding: "10px 14px", marginTop: 12, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+              <span style={{ fontSize: 14 }}>💡</span>
+              <p style={{ fontSize: 16, color: C.yellow, fontWeight: 800 }}>{current.tip}</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ padding: "8px 20px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 12 }}>
+          <button onClick={goPrev} disabled={idx === 0} style={{ background: idx === 0 ? "#E0E0DA" : "#F0F0EE", border: "none", borderRadius: "50%", width: 56, height: 56, fontSize: 22, color: idx === 0 ? "#BBB" : C.text }}>⏮</button>
+          <button onClick={replay} style={{ background: C.yellowL, border: `2px solid ${C.yellow}`, borderRadius: "50%", width: 68, height: 68, fontSize: 26, color: C.yellow }}>🔊</button>
+          <button onClick={goNext} disabled={idx === allSteps.length - 1} style={{ background: idx === allSteps.length - 1 ? "#E0E0DA" : "#F0F0EE", border: "none", borderRadius: "50%", width: 56, height: 56, fontSize: 22, color: idx === allSteps.length - 1 ? "#BBB" : C.text }}>⏭</button>
+        </div>
+        <button onClick={() => { vibrate(); setIdx(0); }} style={{ background: "#F0F0EE", border: "none", borderRadius: 18, height: 48, fontSize: 15, fontWeight: 800, color: C.sub, width: "100%" }}>🔄 从头开始</button>
+      </div>
+    </div>
+  );
+}
+
+// ── 设置（带完整交互） ──
+function SettingsPage({ settings, onToggle, onBack }) {
+  const items = [
+    { key: "sound", icon: "🔊", title: "声音", desc: "播放步骤语音" },
+    { key: "vibrate", icon: "📳", title: "震动", desc: "点击时震动" },
+    { key: "largeFont", icon: "🔤", title: "大字体", desc: "更大的文字" },
+    { key: "darkMode", icon: "🌙", title: "深色模式", desc: "晚上用更舒服" },
+  ];
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: settings.darkMode ? "#1a1a2e" : C.bg }}>
+      <Header title="设置" onBack={onBack} darkMode={settings.darkMode} />
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        {items.map((s, i) => (
+          <button key={i} onClick={() => { vibrate(); onToggle(s.key); }} style={{
+            background: settings.darkMode ? "#16213e" : "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+            padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12,
+            width: "100%", textAlign: "left",
+          }}>
+            <span style={{ fontSize: 24 }}>{s.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: settings.largeFont ? 18 : 16, fontWeight: 900, color: settings.darkMode ? "#eee" : C.text }}>{s.title}</p>
+              <p style={{ fontSize: settings.largeFont ? 14 : 12, color: C.sub, fontWeight: 700 }}>{s.desc}</p>
+            </div>
+            <span style={{ fontSize: 20 }}>{settings[s.key] ? "✅" : "⬜"}</span>
+          </button>
+        ))}
+        <div style={{ background: settings.darkMode ? "#0f3460" : C.blueL, borderRadius: 16, padding: "14px", marginTop: 10, textAlign: "center" }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: settings.darkMode ? "#e94560" : C.blue }}>💡 点一下开关就能打开或关闭</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── 雇主端 ──
+// ══════════════════════════════════════
+
+function EmployerHomePage({ onSwitchRole }) {
+  const [tab, setTab] = useState("overview");
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showEmployeeDetail, setShowEmployeeDetail] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [alerts, setAlerts] = useState([
+    { id: 1, type: "help", who: "小刚", text: "叫了老师", time: "09:12", read: false },
+  ]);
+
+  const markAlertRead = (id) => {
+    setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
+  };
+
+  const mockEmployees = [
+    { name: "小明", job: "烘焙咖啡", status: "工作中", statusColor: C.green, lastHelp: "2小时前", todayTasks: 5, completed: 3 },
+    { name: "小红", job: "酒店客房", status: "练习中", statusColor: C.blue, lastHelp: "今天", todayTasks: 4, completed: 2 },
+    { name: "小刚", job: "后厨辅助", status: "休息", statusColor: C.sub, lastHelp: "昨天", todayTasks: 0, completed: 0 },
+  ];
+
+  const mockTasks = [
+    { title: "开店准备", job: "烘焙咖啡", steps: 3, assignedTo: "小明" },
+    { title: "做咖啡", job: "烘焙咖啡", steps: 4, assignedTo: "小明" },
+    { title: "清洁收尾", job: "烘焙咖啡", steps: 3, assignedTo: "小明" },
+  ];
+
+  if (showCreateTask) return <CreateTaskModal onClose={() => setShowCreateTask(false)} />;
+  if (showEmployeeDetail) return <EmployeeDetailPage employee={showEmployeeDetail} onBack={() => setShowEmployeeDetail(null)} />;
+  if (showSettings) return <EmployerSettingsPage onBack={() => setShowSettings(false)} />;
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>管理端</p>
+          <h1 style={{ fontSize: 20, fontWeight: 900, color: C.text }}>心职助手</h1>
+        </div>
+        <button onClick={onSwitchRole} style={{ background: C.blueL, border: `1.5px solid ${C.blue}30`, borderRadius: 12, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: C.blue }}>
+          切换
+        </button>
+      </div>
+
+      <div style={{ display: "flex", padding: "0 16px", gap: 6, marginBottom: 12 }}>
+        {[
+          { id: "overview", icon: "📊", label: "概览" },
+          { id: "employees", icon: "👥", label: "员工" },
+          { id: "tasks", icon: "📋", label: "任务" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, background: tab === t.id ? C.orangeL : "#F0F0EE",
+            border: tab === t.id ? `2px solid ${C.orange}` : "2px solid transparent",
+            borderRadius: 12, padding: "8px 6px", fontSize: 12, fontWeight: 800,
+            color: tab === t.id ? C.orange : C.sub,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>
+        {tab === "overview" && (
+          <div>
+            {alerts.filter(a => !a.read).length > 0 && (
+              <div style={{ background: C.redL, borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: C.red, marginBottom: 10 }}>🔔 需要关注</p>
+                {alerts.filter(a => !a.read).map(a => (
+                  <div key={a.id} onClick={() => markAlertRead(a.id)} style={{ background: "#FFF", borderRadius: 12, padding: "12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 24 }}>{a.type === "help" ? "🆘" : "📨"}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: C.text }}><b>{a.who}</b> {a.text}</p>
+                      <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>{a.time}</p>
+                    </div>
+                    <span style={{ fontSize: 12, color: C.red, fontWeight: 800 }}>新</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>📋 今天发生了什么</p>
+              {[
+                { time: "10:23", who: "小明", text: "做了咖啡" },
+                { time: "09:45", who: "小红", text: "用「帮我说话」跟客人沟通" },
+                { time: "09:12", who: "小刚", text: "说身体不舒服，在休息" },
+                { time: "08:30", who: "小明", text: "到店开始工作" },
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: i < 3 ? "1px solid #F0F0EE" : "none" }}>
+                  <span style={{ fontSize: 12, color: C.sub, fontWeight: 700, flexShrink: 0 }}>{item.time}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}><b>{item.who}</b> {item.text}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowSettings(true)} style={{
+              background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+              padding: "14px 16px", width: "100%", textAlign: "left",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <span style={{ fontSize: 24 }}>⚙️</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: C.text }}>管理设置</span>
+              <span style={{ marginLeft: "auto", fontSize: 18, color: C.sub }}>›</span>
+            </button>
+          </div>
+        )}
+
+        {tab === "employees" && (
+          <div>
+            {mockEmployees.map((e, i) => (
+              <button key={i} onClick={() => setShowEmployeeDetail(e)} style={{
+                background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+                padding: "14px 16px", marginBottom: 10, width: "100%", textAlign: "left",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: C.text }}>{e.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: e.statusColor, background: e.statusColor + "18", padding: "3px 8px", borderRadius: 8 }}>{e.status}</span>
+                </div>
+                <p style={{ fontSize: 13, color: C.sub, fontWeight: 700 }}>{e.job} · 最近求助：{e.lastHelp}</p>
+                <p style={{ fontSize: 12, color: C.sub, fontWeight: 700, marginTop: 6 }}>今天{e.todayTasks > 0 ? "有工作安排" : "在休息"}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "tasks" && (
+          <div>
+            <button onClick={() => setShowCreateTask(true)} style={{
+              background: C.orange, border: "none", borderRadius: 16,
+              height: 52, fontSize: 16, fontWeight: 900, color: "#fff", width: "100%", marginBottom: 12,
+            }}>＋ 创建新任务</button>
+            {mockTasks.map((t, i) => (
+              <div key={i} style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+                <p style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{t.title}</p>
+                <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>{t.job} · {t.steps}步 · 分配给{t.assignedTo}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 创建任务弹窗 ──
+function CreateTaskModal({ onClose }) {
+  const [step, setStep] = useState(1);
+  const [taskName, setTaskName] = useState("");
+  const [taskJob, setTaskJob] = useState("bakery");
+  const [steps, setSteps] = useState([{ text: "", tip: "" }]);
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [sent, setSent] = useState(false);
+
+  const addStep = () => setSteps([...steps, { text: "", tip: "" }]);
+  const updateStep = (i, field, val) => {
+    const newSteps = [...steps];
+    newSteps[i][field] = val;
+    setSteps(newSteps);
+  };
+  const toggleEmployee = (name) => {
+    setSelectedEmployees(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+  };
+
+  if (sent) return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 28, zIndex: 200 }}>
+      <div style={{ background: "#fff", borderRadius: 28, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+        <span style={{ fontSize: 40, color: C.green, animation: "checkPop 0.4s ease-out", display: "inline-block" }}>✓</span>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: C.text, marginTop: 14, marginBottom: 8 }}>已发送</h2>
+        <button onClick={onClose} style={{ background: C.green, border: "none", borderRadius: 18, height: 52, fontSize: 16, fontWeight: 900, color: "#fff", width: "100%" }}>好的</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 200 }}>
+      <div style={{ background: "#fff", borderRadius: "28px 28px 0 0", padding: "20px 20px 28px", maxHeight: "90%", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 20, fontWeight: 900, color: C.text, flex: 1 }}>创建新任务</h3>
+          <button onClick={onClose} style={{ background: "#EBEBEB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, color: "#555" }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {[1, 2, 3].map(s => (
+            <div key={s} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ background: step >= s ? C.orange : "#E0E0DA", color: step >= s ? "#fff" : "#999", width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900 }}>{s}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: step >= s ? C.orange : "#999" }}>{s === 1 ? "基本信息" : s === 2 ? "编辑步骤" : "发送"}</span>
+            </div>
+          ))}
+        </div>
+
+        {step === 1 && (
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 800, color: C.text, display: "block", marginBottom: 6 }}>任务名称</label>
+            <input value={taskName} onChange={e => setTaskName(e.target.value)} placeholder="例如：做咖啡" style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 14, padding: "12px 14px", fontSize: 16, fontWeight: 700, marginBottom: 14, outline: "none" }} />
+            <label style={{ fontSize: 14, fontWeight: 800, color: C.text, display: "block", marginBottom: 6 }}>所属岗位</label>
+            <select value={taskJob} onChange={e => setTaskJob(e.target.value)} style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 14, padding: "12px 14px", fontSize: 16, fontWeight: 700, marginBottom: 14, outline: "none", background: "#fff" }}>
+              {JOBS.map(j => <option key={j.id} value={j.id}>{j.icon} {j.name}</option>)}
+            </select>
+            <button onClick={() => setStep(2)} style={{ background: C.orange, border: "none", borderRadius: 18, height: 56, fontSize: 17, fontWeight: 900, color: "#fff", width: "100%" }}>下一步</button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            {steps.map((s, i) => (
+              <div key={i} style={{ background: "#F5F5F2", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
+                <p style={{ fontSize: 13, fontWeight: 800, color: C.orange, marginBottom: 6 }}>步骤 {i + 1}</p>
+                <input value={s.text} onChange={e => updateStep(i, "text", e.target.value)} placeholder="做什么？（例如：磨咖啡豆）" style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 12, padding: "10px 12px", fontSize: 15, fontWeight: 700, marginBottom: 8, outline: "none" }} />
+                <input value={s.tip} onChange={e => updateStep(i, "tip", e.target.value)} placeholder="小提示（例如：按一次就够）" style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 12, padding: "10px 12px", fontSize: 15, fontWeight: 700, outline: "none" }} />
+              </div>
+            ))}
+            <button onClick={addStep} style={{ background: C.orangeL, border: `2px solid ${C.orange}30`, borderRadius: 14, height: 48, fontSize: 15, fontWeight: 800, color: C.orange, width: "100%", marginBottom: 14 }}>＋ 添加步骤</button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setStep(1)} style={{ flex: 1, background: "#F0F0EE", border: "none", borderRadius: 18, height: 56, fontSize: 17, fontWeight: 800, color: "#666" }}>上一步</button>
+              <button onClick={() => setStep(3)} style={{ flex: 1, background: C.orange, border: "none", borderRadius: 18, height: 56, fontSize: 17, fontWeight: 900, color: "#fff" }}>下一步</button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>选择发送给谁：</p>
+            {["小明", "小红", "小刚"].map(name => (
+              <button key={name} onClick={() => toggleEmployee(name)} style={{
+                display: "flex", alignItems: "center", gap: 10, background: selectedEmployees.includes(name) ? C.greenL : "#F5F5F2",
+                border: selectedEmployees.includes(name) ? `2px solid ${C.green}` : "2px solid transparent",
+                borderRadius: 14, padding: "14px 16px", marginBottom: 8, width: "100%", textAlign: "left",
+              }}>
+                <span style={{ fontSize: 20 }}>{selectedEmployees.includes(name) ? "✅" : "⬜"}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{name}</span>
+              </button>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button onClick={() => setStep(2)} style={{ flex: 1, background: "#F0F0EE", border: "none", borderRadius: 18, height: 56, fontSize: 17, fontWeight: 800, color: "#666" }}>上一步</button>
+              <button onClick={() => { vibrate(); setSent(true); }} style={{ flex: 1, background: C.green, border: "none", borderRadius: 18, height: 56, fontSize: 17, fontWeight: 900, color: "#fff" }}>🎁 发送任务</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 员工详情页 ──
+function EmployeeDetailPage({ employee, onBack }) {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title={employee.name} onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <div style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "16px", marginBottom: 12, textAlign: "center" }}>
+          <span style={{ fontSize: 48 }}>👷</span>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: C.text, marginTop: 8 }}>{employee.name}</h2>
+          <p style={{ fontSize: 14, color: C.sub, fontWeight: 700 }}>{employee.job}</p>
+          <span style={{ fontSize: 12, fontWeight: 800, color: employee.statusColor, background: employee.statusColor + "18", padding: "4px 10px", borderRadius: 8, display: "inline-block", marginTop: 8 }}>{employee.status}</span>
+        </div>
+
+        <div style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "14px" }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 8 }}>今天发生了什么</p>
+          {[
+            { time: "10:23", action: "做了咖啡" },
+            { time: "09:45", action: "用「帮我说话」跟客人沟通" },
+            { time: "08:30", action: "到店开始工作" },
+          ].map((r, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: i < 2 ? "1px solid #F0F0EE" : "none" }}>
+              <span style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>{r.time}</span>
+              <span style={{ fontSize: 13, color: C.text, fontWeight: 700 }}>{r.action}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 雇主设置页 ──
+function EmployerSettingsPage({ onBack }) {
+  const [settings, setSettings] = useState({
+    notifications: true,
+    dailyReport: true,
+    autoAssign: false,
+  });
+
+  const toggle = (key) => {
+    vibrate();
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="管理设置" onBack={onBack} />
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        {[
+          { key: "notifications", icon: "🔔", title: "求助通知", desc: "员工求助时立即通知" },
+          { key: "dailyReport", icon: "📊", title: "每日报告", desc: "每天发送工作摘要" },
+          { key: "autoAssign", icon: "🔄", title: "自动分配", desc: "新员工自动分配任务" },
+        ].map((s, i) => (
+          <button key={i} onClick={() => toggle(s.key)} style={{
+            background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+            padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12,
+            width: "100%", textAlign: "left",
+          }}>
+            <span style={{ fontSize: 24 }}>{s.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 16, fontWeight: 900, color: C.text }}>{s.title}</p>
+              <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>{s.desc}</p>
+            </div>
+            <span style={{ fontSize: 20 }}>{settings[s.key] ? "✅" : "⬜"}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── 家长端 ──
+// ══════════════════════════════════════
+
+function ParentHomePage({ onSwitchRole }) {
+  const [tab, setTab] = useState("child");
+  const [showEmergencyContact, setShowEmergencyContact] = useState(false);
+  const [showReportDetail, setShowReportDetail] = useState(false);
+
+  if (showEmergencyContact) return <EmergencyContactPage onBack={() => setShowEmergencyContact(false)} />;
+  if (showReportDetail) return <ReportDetailPage onBack={() => setShowReportDetail(false)} />;
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>家长端</p>
+          <h1 style={{ fontSize: 20, fontWeight: 900, color: C.text }}>心职助手</h1>
+        </div>
+        <button onClick={onSwitchRole} style={{ background: C.purpleL, border: `1.5px solid ${C.purple}30`, borderRadius: 12, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: C.purple }}>
+          切换
+        </button>
+      </div>
+
+      <div style={{ display: "flex", padding: "0 16px", gap: 6, marginBottom: 12 }}>
+        {[
+          { id: "child", icon: "👤", label: "孩子" },
+          { id: "records", icon: "💬", label: "记录" },
+          { id: "settings", icon: "⚙️", label: "设置" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, background: tab === t.id ? C.purpleL : "#F0F0EE",
+            border: tab === t.id ? `2px solid ${C.purple}` : "2px solid transparent",
+            borderRadius: 12, padding: "8px 6px", fontSize: 12, fontWeight: 800,
+            color: tab === t.id ? C.purple : C.sub,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>
+        {tab === "child" && (
+          <div>
+            <div style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "16px", marginBottom: 12, textAlign: "center" }}>
+              <span style={{ fontSize: 48 }}>👷</span>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: C.text, marginTop: 8 }}>小明</h2>
+              <p style={{ fontSize: 14, color: C.sub, fontWeight: 700 }}>烘焙咖啡 · 工作中</p>
+            </div>
+            <div style={{ background: C.blueL, borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.blue, marginBottom: 6 }}>🔒 关于这些数据</p>
+              <p style={{ fontSize: 12, color: C.sub, fontWeight: 700, lineHeight: 1.5 }}>小明知道这些数据被记录。他随时可以关闭分享。这些数据只帮助了解他的工作情况，不做评价。</p>
+            </div>
+            <div style={{ background: C.greenL, borderRadius: 16, padding: "14px", marginBottom: 12, textAlign: "center" }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: C.green }}>✅ 今天一切正常，没有求助</p>
+            </div>
+            <button onClick={() => setShowReportDetail(true)} style={{
+              background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+              padding: "14px 16px", width: "100%", textAlign: "left",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <span style={{ fontSize: 24 }}>📊</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 16, fontWeight: 900, color: C.text }}>查看详细报告</p>
+                <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>本周工作数据汇总</p>
+              </div>
+              <span style={{ fontSize: 18, color: C.sub }}>›</span>
+            </button>
+          </div>
+        )}
+
+        {tab === "records" && (
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>今日使用记录</p>
+            {[
+              { time: "10:23", action: "完成了「做咖啡」", type: "完成" },
+              { time: "09:45", action: "使用了「帮我说话」", type: "沟通" },
+              { time: "09:12", action: "发送了「我不舒服」", type: "求助" },
+              { time: "08:30", action: "开始工作", type: "开始" },
+            ].map((r, i) => (
+              <div key={i} style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 14, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, color: C.sub, fontWeight: 700, flexShrink: 0 }}>{r.time}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text, flex: 1 }}>{r.action}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: C.blue, background: C.blueL, padding: "2px 8px", borderRadius: 6 }}>{r.type}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "settings" && (
+          <div>
+            {[
+              { icon: "🔔", title: "接收通知", desc: "孩子求助时通知我", on: true, action: "toggle" },
+              { icon: "📊", title: "每日报告", desc: "每天发送工作摘要", on: true, action: "toggle" },
+              { icon: "📞", title: "紧急联系人", desc: "设置紧急联系电话", on: false, action: "navigate" },
+            ].map((s, i) => (
+              <button key={i} onClick={() => { if (s.action === "navigate") setShowEmergencyContact(true); }} style={{
+                background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16,
+                padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12,
+                width: "100%", textAlign: "left",
+              }}>
+                <span style={{ fontSize: 24 }}>{s.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 16, fontWeight: 900, color: C.text }}>{s.title}</p>
+                  <p style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>{s.desc}</p>
+                </div>
+                <span style={{ fontSize: 20 }}>{s.action === "toggle" ? (s.on ? "✅" : "⬜") : "›"}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 紧急联系人页 ──
+function EmergencyContactPage({ onBack }) {
+  const [contacts, setContacts] = useState([
+    { name: "王老师", phone: "138****1234", relation: "辅导员" },
+    { name: "李医生", phone: "139****5678", relation: "医生" },
+  ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+
+  const addContact = () => {
+    if (newName && newPhone) {
+      setContacts([...contacts, { name: newName, phone: newPhone, relation: "其他" }]);
+      setNewName("");
+      setNewPhone("");
+      setShowAdd(false);
+    }
+  };
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="紧急联系人" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        {contacts.map((c, i) => (
+          <div key={i} style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 16, fontWeight: 900, color: C.text }}>{c.name}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: C.sub, background: "#F0F0EE", padding: "2px 8px", borderRadius: 6 }}>{c.relation}</span>
+            </div>
+            <p style={{ fontSize: 14, color: C.sub, fontWeight: 700, marginTop: 4 }}>{c.phone}</p>
+          </div>
+        ))}
+
+        {showAdd ? (
+          <div style={{ background: "#F5F5F2", borderRadius: 16, padding: "14px", marginTop: 10 }}>
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="姓名" style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 12, padding: "10px 12px", fontSize: 15, fontWeight: 700, marginBottom: 8, outline: "none" }} />
+            <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="电话" style={{ width: "100%", border: "2px solid #E0E0E0", borderRadius: 12, padding: "10px 12px", fontSize: 15, fontWeight: 700, marginBottom: 10, outline: "none" }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowAdd(false)} style={{ flex: 1, background: "#E0E0DA", border: "none", borderRadius: 12, height: 44, fontSize: 15, fontWeight: 800, color: "#666" }}>取消</button>
+              <button onClick={addContact} style={{ flex: 1, background: C.green, border: "none", borderRadius: 12, height: 44, fontSize: 15, fontWeight: 900, color: "#fff" }}>添加</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAdd(true)} style={{
+            background: C.blueL, border: `2px solid ${C.blue}30`, borderRadius: 16,
+            height: 48, fontSize: 15, fontWeight: 800, color: C.blue, width: "100%", marginTop: 10,
+          }}>＋ 添加联系人</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 详细报告页 ──
+function ReportDetailPage({ onBack }) {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg }}>
+      <Header title="详细报告" onBack={onBack} />
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+
+
+        <div style={{ background: C.greenL, borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: C.green, marginBottom: 12 }}>✨ 本周亮点</p>
+          {[
+            { icon: "💬", text: "小明这周主动沟通了 5 次" },
+            { icon: "☕", text: "独立完成了做咖啡的每个步骤" },
+            { icon: "🤝", text: "遇到问题时知道叫老师来帮忙" },
+            { icon: "😊", text: "周三自己说「身体不舒服」，会表达了" },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < 3 ? "1px solid rgba(46,125,50,0.1)" : "none" }}>
+              <span style={{ fontSize: 20 }}>{item.icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: "#FFF", border: "1.5px solid #E0E0DA", borderRadius: 16, padding: "14px" }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 8 }}>这周发生了什么</p>
+          {[
+            { day: "周五", text: "做了咖啡，跟客人说了「请稍等」" },
+            { day: "周四", text: "用「帮我说话」点了单" },
+            { day: "周三", text: "说身体不舒服，休息了一下" },
+            { day: "周二", text: "做了清洁收尾" },
+            { day: "周一", text: "到店开始工作" },
+          ].map((f, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: i < 4 ? "1px solid #F0F0EE" : "none" }}>
+              <span style={{ fontSize: 12, color: C.sub, fontWeight: 700, width: 36, flexShrink: 0 }}>{f.day}</span>
+              <span style={{ fontSize: 13, color: C.text, fontWeight: 700 }}>{f.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// ── APP ──
+// ══════════════════════════════════════
+
+function App() {
+  const [screen, setScreen] = useState("login");
+  const [userName, setUserName] = useState("");
+  const [role, setRole] = useState("");
+  const [jobId, setJobId] = useState("bakery");
+  const [settings, setSettings] = useState({
+    sound: true,
+    vibrate: true,
+    largeFont: false,
+    darkMode: false,
+  });
+
+  const now = new Date();
+  const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  const handleLogin = (name, selectedRole) => {
+    vibrate();
+    setUserName(name);
+    setRole(selectedRole);
+    if (selectedRole === "worker") {
+      setScreen("jobSelect");
+    } else {
+      setScreen("home");
+    }
+  };
+
+  const handleJobSelect = (job) => {
+    vibrate();
+    setJobId(job);
+    setScreen("home");
+  };
+
+  const switchRole = () => {
+    const roles = ["worker", "employer", "parent"];
+    const idx = roles.indexOf(role);
+    const next = roles[(idx + 1) % roles.length];
+    setRole(next);
+    if (next === "worker") {
+      setScreen("jobSelect");
+    } else {
+      setScreen("home");
+    }
+  };
+
+  const toggleSetting = (key) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const renderContent = () => {
+    if (screen === "login") return <LoginPage onLogin={handleLogin} />;
+    if (screen === "jobSelect") return <JobSelectPage onSelect={handleJobSelect} onBack={() => setScreen("login")} />;
+
+    if (role === "worker") {
+      if (screen === "home") return <WorkerHomePage userName={userName} jobId={jobId} settings={settings} onSpeak={() => setScreen("speak")} onEmergency={() => setScreen("emergency")} onMood={() => setScreen("mood")} onShare={() => setScreen("share")} onPlayer={() => setScreen("player")} onQuickCard={() => setScreen("quickCard")} onSettings={() => setScreen("settings")} onSwitchRole={switchRole} />;
+      if (screen === "speak") return <SpeakPage jobId={jobId} settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "emergency") return <EmergencyPage jobId={jobId} settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "mood") return <MoodPage settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "share") return <SharePage settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "player") return <PlayerPage jobId={jobId} settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "quickCard") return <QuickCardPage jobId={jobId} settings={settings} onBack={() => setScreen("home")} />;
+      if (screen === "settings") return <SettingsPage settings={settings} onToggle={toggleSetting} onBack={() => setScreen("home")} />;
+    }
+    if (role === "employer") return <EmployerHomePage settings={settings} onSwitchRole={switchRole} />;
+    if (role === "parent") return <ParentHomePage settings={settings} onSwitchRole={switchRole} />;
+
+    return <LoginPage onLogin={handleLogin} />;
+  };
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#C8C3BD", fontFamily: "'Nunito', sans-serif", padding: "24px 0" }}>
+      <div style={{ width: 390, height: 844, background: C.bg, borderRadius: 52, overflow: "hidden", boxShadow: "0 48px 120px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.12)", display: "flex", flexDirection: "column" }}>
+        <div style={{ height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative" }}>
+          <span style={{ fontSize: 15, fontWeight: 900, color: C.text, zIndex: 1 }}>{timeStr}</span>
+          <div style={{ width: 126, height: 34, background: "#1A1A1A", borderRadius: 20, position: "absolute", left: "50%", transform: "translateX(-50%)" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, zIndex: 1 }}>●●●</span>
+        </div>
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          {renderContent()}
+        </div>
+        <div style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ width: 134, height: 5, background: "#1A1A1A", borderRadius: 3, opacity: 0.18 }} /></div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
